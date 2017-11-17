@@ -37,9 +37,8 @@
 #define state_stop        0
 #define state_walking     1
 #define state_happy       2
-#define state_moveHead    3
+#define state_sayNo    3
 #define state_happy2      4
-#define state_crazy        5
 
 #define IR_pin           2
 #define IR_up            0xFF629D
@@ -65,29 +64,47 @@ int state = state_stop;
 
 IRrecv irrecv(IR_pin); 
 decode_results results;
+bool ledStatus= HIGH;
 
+/*
+ * Initial setu
+ * Servos
+ * IR
+ * Led blick (to check all is alright)
+ */
 void setup() {
+  // Setup servos
   leg_l.attach(9); 
   leg_r.attach(10);
   hip.attach(11);
   head.attach(6);
   tail.attach(5);
+  
+  //Setup receiver
+  irrecv.enableIRIn();
+  irrecv.blink13(false);
 
-  irrecv.enableIRIn(); // Start the receiver
-  irrecv.blink13(true);
+  // Blink led in a interval loop
+  pinMode(LED_BUILTIN,OUTPUT);
+  ledBlink();
+  ilTimerControl.interval(ledBlink, 1000);
 
-  Serial.begin(9600);
-
-  //stop();
+  //Enter to walk mode
   walk();
-  //happy();
-  //moveHead();
-  //happy2();
-  //state_crazy();
-
-  randomSeed(analogRead(0));
 }
 
+/**
+ * Led blick loop
+ */
+void ledBlink(){
+  digitalWrite(LED_BUILTIN,ledStatus);
+  ledStatus=!ledStatus;
+  
+}
+
+/*
+ * Go to neutral position
+ */
 void neutral(){
   Head(head_neutral);
   Hip(hip_neutral);
@@ -96,7 +113,9 @@ void neutral(){
   Tail(tail_neutral);
 }
 
-
+/**
+ * set stop status
+ */
 void stop(){
   if (state ==  state_stop)
     return;
@@ -106,6 +125,9 @@ void stop(){
   neutral();
 }
 
+/**
+ * set walk status
+ */
 void walk(){
   if (state ==  state_walking)
     return;
@@ -113,139 +135,6 @@ void walk(){
   state =  state_walking;
   state_step=0;
   walk_seq();
-}
-
-void happy(){
-  if (state ==  state_happy)
-    return;
-    
-  state =  state_happy;
-  state_step=0;
-  neutral();
-  happy_seq();
-}
-
-void moveHead(){
-  if (state ==  state_moveHead)
-    return;
-    
-  state =  state_moveHead;
-  state_step=0;
-  neutral();
-  moveHead_seq();
-}
-
-void happy2(){
-  if (state ==  state_happy2)
-    return;
-    
-  state =  state_happy2;
-  state_step=0;
-  neutral();
-  happy2_seq();
-}
-
-void crazy(){
-  if (state ==  state_crazy)
-    return;
-    
-  state =  state_crazy;
-  state_step=0;
-  neutral();
-  crazy();
-}
-
-
-void moveHead_seq(){
-  int delayTimeout = 300;
-  
-  if (state != state_moveHead)
-    return;
-
-  switch (state_step){
-    // LEFT step
-    // move the hip and head to stabilize
-    case 0:
-      Head(head_left);
-    break;
-    case 1:
-      Head(head_right);
-    break;
-  }
-
-  state_step = (state_step + 1) % 2;
-  
-  ilTimerControl.timeout(moveHead_seq, delayTimeout);
-}
-
-void happy_seq(){
-  int delayTimeout = 300;
-  
-  if (state != state_happy)
-    return;
-
-  switch (state_step){
-    // LEFT step
-    // move the hip and head to stabilize
-    case 0:
-      Tail(tail_happy_left);
-    break;
-    case 1:
-      Tail(tail_happy_right);
-    break;
-  }
-
-  state_step = (state_step + 1) % 2;
-  
-  ilTimerControl.timeout(happy_seq, delayTimeout);
-}
-
-
-void happy2_seq(){
-  int delayTimeout = 250;
-  
-  if (state != state_happy2)
-    return;
-
-  switch (state_step){
-    // LEFT step
-    // move the hip and head to stabilize
-    case 0:
-      Tail(tail_happy_right);
-      Head(head_left);
-    break;
-    case 1:
-      Tail(tail_happy_left);
-      Head(head_right);
-    break;
-  }
-
-  state_step = (state_step + 1) % 2;
-  
-  ilTimerControl.timeout(happy2_seq, delayTimeout);
-}
-
-void crazy_seq(){
-  int delayTimeout = 500;
-  int p;
-  
-  if (state != state_crazy)
-    return;
-
-  p = random(30, 150);
-  Leg_l(p);
-  p = random(30, 150);
-  Leg_r(p);
-  p = random(30, 150);
-  Hip(p);
-  p = random(30, 150);
-  Head(p);
-  p = random(30, 150);
-  Tail(p);
-
-  //Serial.println(p);
-  
-  ilTimerControl.timeout(state_crazy, delayTimeout);
 }
 
 /**
@@ -309,6 +198,131 @@ void walk_seq(){
 }
 
 
+/**
+ * set happy status
+ */
+void happy(){
+  if (state ==  state_happy)
+    return;
+    
+  state =  state_happy;
+  state_step=0;
+  neutral();
+  happy_seq();
+}
+
+/**
+ * happy sequence
+ */
+void happy_seq(){
+  int delayTimeout = 300;
+  
+  if (state != state_happy)
+    return;
+
+  switch (state_step){
+    // LEFT step
+    // move the hip and head to stabilize
+    case 0:
+      Tail(tail_happy_left);
+    break;
+    case 1:
+      Tail(tail_happy_right);
+    break;
+  }
+
+  state_step = (state_step + 1) % 2;
+  
+  ilTimerControl.timeout(happy_seq, delayTimeout);
+}
+
+/**
+ * set say no status
+ */
+void sayNo(){
+  if (state ==  state_sayNo)
+    return;
+    
+  state =  state_sayNo;
+  state_step=0;
+  neutral();
+  sayNo_seq();
+}
+
+/**
+ * Say no sequence
+ */
+void sayNo_seq(){
+  int delayTimeout = 300;
+  
+  if (state != state_sayNo)
+    return;
+
+  switch (state_step){
+    // LEFT step
+    // move the hip and head to stabilize
+    case 0:
+      Head(head_left);
+    break;
+    case 1:
+      Head(head_right);
+    break;
+  }
+
+  state_step = (state_step + 1) % 2;
+  
+  ilTimerControl.timeout(sayNo_seq, delayTimeout);
+}
+
+
+/**
+ * set happy2 status
+ */
+void happy2(){
+  if (state ==  state_happy2)
+    return;
+    
+  state =  state_happy2;
+  state_step=0;
+  neutral();
+  happy2_seq();
+}
+
+
+/**
+ * happy2 sequence
+ */
+void happy2_seq(){
+  int delayTimeout = 250;
+  
+  if (state != state_happy2)
+    return;
+
+  switch (state_step){
+    // LEFT step
+    // move the hip and head to stabilize
+    case 0:
+      Tail(tail_happy_right);
+      Head(head_left);
+    break;
+    case 1:
+      Tail(tail_happy_left);
+      Head(head_right);
+    break;
+  }
+
+  state_step = (state_step + 1) % 2;
+  
+  ilTimerControl.timeout(happy2_seq, delayTimeout);
+}
+
+
+
+/**
+ * Main loop
+ * - Timmer loop
+ * - IR reception
+ */
 void loop() {
   ilTimerControl.check();
 
@@ -327,18 +341,16 @@ void loop() {
           happy();
           break;
         case IR_2:
-          moveHead();
+          sayNo();
           break;
         case IR_3:
           happy2();
-          break;
-        case IR_4:
-          crazy();
           break;
       }
     }
     irrecv.resume();
   }
+  
 
 
 }
